@@ -1,21 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <random>
-#include <map>
 
 using namespace std;
-
-bool TrueSimplicityCheck(unsigned int n)
-{
-    if (n < 4) return true;
-    if ((n & 1) == 0) return false;
-
-    unsigned int k = sqrt(n);
-    for (unsigned int i = 3; i < (k + 1); i += 2) {
-        if (n % i == 0) return false;
-    }
-    return true;
-}
 
 unsigned int FastExpByMod(unsigned int a, unsigned int x, unsigned int p)
 {
@@ -55,7 +42,7 @@ bool SimplicityCheck(unsigned int n)
     unsigned int d = n - 1, s = 0, k = log2((double)n), a;
     char test;
     random_device rd;
-    cout << "Im checking " << n << endl;
+//    cout << "Im checking " << n << endl;
     for (; (d & 1) == 0; d >>= 1) s++;
 
     for (unsigned int i = 0; i < k; i++) {
@@ -96,7 +83,7 @@ pair<unsigned int, unsigned int> pgGenerator(void)
     do {
         pg.first = PrimeNubmerGen(1e8, 4e9);
         q = (pg.first - 1) / 2;
-        cout << "THIS IS Q " << q << endl;
+//        cout << "THIS IS Q " << q << endl;
     } while (!SimplicityCheck(q));
 
     do {
@@ -105,95 +92,9 @@ pair<unsigned int, unsigned int> pgGenerator(void)
     return pg;
 }
 
-unsigned int BabyStepGiantStep(unsigned int y, unsigned int a, unsigned int p)
-{
-    unsigned int k, m;
-    map<unsigned int, unsigned int> babyStep;
-    map<unsigned int, unsigned int>::iterator it;
-    k = m = sqrt(p) + 1;
-    cout << "k = " << k << ", m = " << m << endl;
-    for (unsigned int j = m; j > 0; j--) {
-        babyStep.insert(pair<unsigned int, unsigned int>(((long long)FastExpByMod(a, j - 1, p) * (long long)y) % p, j - 1));
-        //cout << "j = " << j - 1 << ", (a ^ (j) * y) % p = " << (FastExpByMod(a, j - 1, p) * y) % p << endl;
-    }
-    cout << endl;
-    for (unsigned int i = 1; i <= k; i++) {
-        it = babyStep.find(FastExpByMod(a, m * i, p));
-        //cout << "i = " << i << ", a ^ (i * m) % p = " << FastExpByMod(a, m * i, p) << endl;
-        if ((it != babyStep.end()) && (y == FastExpByMod(a, i * m - it->second, p))) {
-            cout << endl;
-            return i * m - it->second;
-        }
-    }
-    return 0;
-}
-
-class DHuser {
-private:
-    unsigned int secret_key, p, g;
-    random_device rd;
-public:
-    DHuser(pair<unsigned int, unsigned int> pg) {
-        secret_key = ((double)rd() / ((double)rd.max() + 1.0)) * 1e9 + 1e9;
-        p = pg.first;
-        g = pg.second;
-    }
-
-    void ShowMeYourSecret() {
-        cout << "My secret = " << secret_key << endl;
-    }
-
-    unsigned int GetPublicKey() {
-        return FastExpByMod(g, secret_key, p);
-    }
-
-    unsigned int CalcCommonKey(unsigned int key) {
-        return FastExpByMod(key, secret_key, p);
-    }
-};
-
 int main(int argc, char** argv)
 {
-    unsigned int a, x, p, y, simp;
-    cout << "Input a, x and p:";
-    cin >> a >> x >> p;
-    y = FastExpByMod(a, x, p);
 
-    cout << "Output: " << y << endl;
-
-    vector<unsigned int> res(3);
-
-    cout << "Input two numbers:";
-    cin >> a >> x;
-
-    res = EuclideanAlgorithm(a, x);
-
-    cout << "GCD = " << res[0] << ", x = " << (signed int)res[1] << ", y = " << (signed int)res[2] << endl;
-
-    simp = PrimeNubmerGen(1000000000, 4290000000);
-
-    cout << "Prime number = " << simp;
-
-    if (TrueSimplicityCheck(simp)) cout << " (its true)" << endl;
-    else cout << " (actually, not)" << endl;
-
-    pair<unsigned int, unsigned int> pg;
-    pg = pgGenerator();
-    cout << "P = " << pg.first << ", G = " << pg.second << endl;
-
-    DHuser user1(pg), user2(pg);
-
-    if (user1.CalcCommonKey(user2.GetPublicKey()) == user2.CalcCommonKey(user1.GetPublicKey())) cout << "DH works" << endl;
-    else cout << "DH doesnt work" << endl;
-
-    cout << "Z1 = " << user1.CalcCommonKey(user2.GetPublicKey()) << "\nZ2 = " << user2.CalcCommonKey(user1.GetPublicKey()) << endl;
-
-    x = BabyStepGiantStep(user1.CalcCommonKey(user2.GetPublicKey()), user2.GetPublicKey(), pg.first);
-    cout << "Y = " << user1.CalcCommonKey(user2.GetPublicKey()) << ", A = " << user2.GetPublicKey() << ", p = " << pg.first << endl;
-
-    /* x = BabyStepGiantStep(12375846, 487880078 , 530531867); */
-    user1.ShowMeYourSecret();
-    cout << "X = " << x << endl;
     return 0;
 }
 
