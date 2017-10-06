@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <fstream>
 
 using namespace std;
 
@@ -155,6 +156,50 @@ public:
         return FastExpByMod(m, c, n);
     }
 
+    int encryptFile(const char* str, unsigned int db, unsigned int nb) {
+        ifstream fin(str, ios_base::binary | ios_base::in);
+        ofstream fout("out.encrypted", ios_base::binary | ios_base::out |ios_base::trunc);
+        if (!fin.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return -1;
+        }
+        unsigned int e;
+        char symb;
+
+        while (!fin.eof()) {
+            fin.read(&symb, sizeof(symb));
+            if (!fin.eof()) {
+                e = FastExpByMod(symb, db, nb);
+                fout.write((char *)&e, sizeof(e));
+            }
+        }
+        fin.close();
+        fout.close();
+        return 0;
+    }
+
+    int decryptFile(const char* str) {
+        ifstream fin(str, ios_base::binary | ios_base::in);
+        ofstream fout("out.decrypted", ios_base::binary | ios_base::out | ios_base::trunc);
+        if (!fin.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return -1;
+        }
+        char e;
+        unsigned int symb;
+
+        while (!fin.eof()) {
+            fin.read((char *)&symb, sizeof(symb));
+            if (!fin.eof()) {
+                e = FastExpByMod(symb, c, n);
+                fout.write(&e, sizeof(e));
+            }
+        }
+        fin.close();
+        fout.close();
+        return 0;
+    }
+
     unsigned int getN() {
         return n;
     }
@@ -197,6 +242,9 @@ int main(int argc, char** argv)
 
     x2 = rsauser2.decryptMessage(x1);
     cout << "m' = " << x2 << endl;
+
+    rsauser1.encryptFile("Makefile", rsauser2.getD(), rsauser2.getN());
+    rsauser2.decryptFile("out.encrypted");
 
     return 0;
 }
