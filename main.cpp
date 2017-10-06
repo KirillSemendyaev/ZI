@@ -110,42 +110,93 @@ public:
     unsigned int sendToUser(unsigned int m) {
         return FastExpByMod(m, c, p);
     }
+
     unsigned int receiveFromUser(unsigned int m) {
         return FastExpByMod(m, c, p);
     }
+
     unsigned int replyToUser(unsigned int m) {
         return FastExpByMod(m, d, p);
     }
+
     unsigned int decryptMessage(unsigned int m) {
         return FastExpByMod(m, d, p);
     }
+
     void showMeYourSecrets() {
         cout << "c = " << c << ", d = " << d << ", p = " << p << ", (c*d)%(p-1) = " << ((long long int)c * (long long int)d) % (long long int)(p - 1) << endl;
     }
+};
+
+class RSAUser{
+private:
+    unsigned int p, q, c, d, n;
+public:
+    RSAUser(unsigned int a, unsigned int b) {
+        random_device rd;
+        vector<int> out(3);
+        p = PrimeNubmerGen(a, b);
+        do {
+            q = PrimeNubmerGen(a, b);
+        } while (p == q);
+        n = p * q;
+        do {
+            c = ((double)rd() / ((double)rd.max() + 1.0)) * ((p - 1) * (q - 1) - 2) + 1;
+            out = EuclideanAlgorithm(c, (p - 1) * (q - 1));
+        } while (out[0] != 1);
+        d = (out[2] > 0) ? out[2] : (out[2] + (p - 1) * (q - 1));
+    }
+
+    unsigned int encryptMessage(unsigned int m, unsigned int db, unsigned int nb) {
+        return FastExpByMod(m, db, nb);
+    }
+
+    unsigned int decryptMessage(unsigned int m) {
+        return FastExpByMod(m, c, n);
+    }
+
+    unsigned int getN() {
+        return n;
+    }
+
+    unsigned int getD() {
+        return d;
+    }
+
 };
 
 int main(int argc, char** argv)
 {
     random_device rd;
     unsigned int p = PrimeNubmerGen(1e8, 2e9), m, x1, x2, x3, x4;
-    ShamirUser user1(p), user2(p);
-    user1.showMeYourSecrets();
-    user2.showMeYourSecrets();
+    ShamirUser shamiruser1(p), shamiruser2(p);
+    shamiruser1.showMeYourSecrets();
+    shamiruser2.showMeYourSecrets();
 
     m = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 2) + 1;
     cout << "Message = " << m << endl;
 
-    x1 = user1.sendToUser(m);
+    x1 = shamiruser1.sendToUser(m);
     cout << "x1 = " << x1 << endl;
 
-    x2 = user2.receiveFromUser(x1);
+    x2 = shamiruser2.receiveFromUser(x1);
     cout << "x2 = " << x2 << endl;
 
-    x3 = user1.replyToUser(x2);
+    x3 = shamiruser1.replyToUser(x2);
     cout << "x3 = " << x3 << endl;
 
-    x4 = user2.decryptMessage(x3);
+    x4 = shamiruser2.decryptMessage(x3);
     cout << "x4 = " << x4 << endl;
+
+    RSAUser rsauser1(256, 65535), rsauser2(256, 65535);
+    m = ((double)rd() / ((double)rd.max() + 1.0)) * (rsauser2.getN() - 2) + 1;
+    cout << "Message = " << m << endl;
+
+    x1 = rsauser1.encryptMessage(m, rsauser2.getD(), rsauser2.getN());
+    cout << "e = " << x1 << endl;
+
+    x2 = rsauser2.decryptMessage(x1);
+    cout << "m' = " << x2 << endl;
 
     return 0;
 }
