@@ -200,6 +200,11 @@ public:
         return 0;
     }
 
+    void showMeYourSecrets() {
+        cout << "P = " << p << ", Q = " << q << ", N = " << n << endl;
+        cout << "C = " << c << ", D = " << d << endl;
+    }
+
     unsigned int getN() {
         return n;
     }
@@ -233,7 +238,11 @@ int main(int argc, char** argv)
     x4 = shamiruser2.decryptMessage(x3);
     cout << "x4 = " << x4 << endl;
 
-    RSAUser rsauser1(256, 65535), rsauser2(256, 65535);
+    RSAUser rsauser1(256, 46340), rsauser2(256, 46340);
+
+    rsauser1.showMeYourSecrets();
+    rsauser2.showMeYourSecrets();
+
     m = ((double)rd() / ((double)rd.max() + 1.0)) * (rsauser2.getN() - 2) + 1;
     cout << "Message = " << m << endl;
 
