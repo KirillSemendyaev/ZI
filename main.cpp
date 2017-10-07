@@ -5,6 +5,8 @@
 
 using namespace std;
 
+random_device rd;
+
 unsigned int FastExpByMod(unsigned int a, unsigned int x, unsigned int p)
 {
     unsigned long long temp = 1, s = a;
@@ -42,7 +44,6 @@ bool SimplicityCheck(unsigned int n)
     if ((n & 1) == 0) return false;
     unsigned int d = n - 1, s = 0, k = log2((double)n), a;
     char test;
-    random_device rd;
 //    cout << "Im checking " << n << endl;
     for (; (d & 1) == 0; d >>= 1) s++;
 
@@ -65,7 +66,6 @@ bool SimplicityCheck(unsigned int n)
 
 unsigned int PrimeNubmerGen(unsigned int a, unsigned int b)
 {
-    random_device rd;
     bool f = false;
     unsigned int rand;
     for (int i = 0; (i < 100) && !f; i++) {
@@ -79,10 +79,11 @@ pair<unsigned int, unsigned int> pgGenerator(void)
 {
     pair<unsigned int, unsigned int> pg;
     unsigned int q;
-    random_device rd;
 
     do {
         pg.first = PrimeNubmerGen(1e8, 4e9);
+        if (pg.first == (unsigned int)-1)
+            continue;
         q = (pg.first - 1) / 2;
 //        cout << "THIS IS Q " << q << endl;
     } while (!SimplicityCheck(q));
@@ -99,10 +100,9 @@ private:
 public:
     ShamirUser(unsigned int a) {
         p = a;
-        random_device rd;
         vector<int> out(3);
         do {
-            c = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 2) + 1;
+            c = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 2;
             out = EuclideanAlgorithm(c, p - 1);
         } while (out[0] != 1);
         d = (out[2] > 0) ? out[2] : (out[2] + p - 1);
@@ -134,7 +134,6 @@ private:
     unsigned int p, q, c, d, n;
 public:
     RSAUser(unsigned int a, unsigned int b) {
-        random_device rd;
         vector<int> out(3);
         p = PrimeNubmerGen(a, b);
         do {
@@ -142,7 +141,7 @@ public:
         } while (p == q);
         n = p * q;
         do {
-            c = ((double)rd() / ((double)rd.max() + 1.0)) * ((p - 1) * (q - 1) - 2) + 1;
+            c = ((double)rd() / ((double)rd.max() + 1.0)) * ((p - 1) * (q - 1) - 3) + 2;
             out = EuclideanAlgorithm(c, (p - 1) * (q - 1));
         } while (out[0] != 1);
         d = (out[2] > 0) ? out[2] : (out[2] + (p - 1) * (q - 1));
@@ -158,7 +157,7 @@ public:
 
     int encryptFile(const char* str, unsigned int db, unsigned int nb) {
         ifstream fin(str, ios_base::binary | ios_base::in);
-        ofstream fout("out.encrypted", ios_base::binary | ios_base::out |ios_base::trunc);
+        ofstream fout("out.RSAencrypted", ios_base::binary | ios_base::out |ios_base::trunc);
         if (!fin.is_open() || !fout.is_open()) {
             cout << "Can't open file" << endl;
             return -1;
@@ -180,7 +179,7 @@ public:
 
     int decryptFile(const char* str) {
         ifstream fin(str, ios_base::binary | ios_base::in);
-        ofstream fout("out.decrypted", ios_base::binary | ios_base::out | ios_base::trunc);
+        ofstream fout("out.RSAdecrypted", ios_base::binary | ios_base::out | ios_base::trunc);
         if (!fin.is_open() || !fout.is_open()) {
             cout << "Can't open file" << endl;
             return -1;
@@ -215,15 +214,46 @@ public:
 
 };
 
+class ElGamalUser {
+private:
+    unsigned int p, g, c, d;
+public:
+    ElGamalUser(pair<unsigned int, unsigned int> pg) {
+        p = pg.first;
+        g = pg.second;
+        c = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 2;
+        d = FastExpByMod(g, c, p);
+    }
+
+    unsigned int getD() {
+        return d;
+    }
+
+    pair<unsigned int, unsigned int> encryptMessage(unsigned int m, unsigned int db) {
+        unsigned long long int one = m, two;
+        unsigned int k = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 2;
+        pair<unsigned int, unsigned int> re;
+        re.first = FastExpByMod(g, k, p);
+        two = FastExpByMod(db, k, p) * one;
+        re.second = two % p;
+        return re;
+    }
+
+    unsigned int decryptMessage(pair<unsigned int, unsigned int> re) {
+        unsigned long long int one = re.second, two = FastExpByMod(re.first, p - 1 - c, p);
+        two = (one * two) % p;
+        return two;
+    }
+};
+
 int main(int argc, char** argv)
 {
-    random_device rd;
     unsigned int p = PrimeNubmerGen(1e8, 2e9), m, x1, x2, x3, x4;
     ShamirUser shamiruser1(p), shamiruser2(p);
     shamiruser1.showMeYourSecrets();
     shamiruser2.showMeYourSecrets();
 
-    m = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 2) + 1;
+    m = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 2;
     cout << "Message = " << m << endl;
 
     x1 = shamiruser1.sendToUser(m);
@@ -243,7 +273,7 @@ int main(int argc, char** argv)
     rsauser1.showMeYourSecrets();
     rsauser2.showMeYourSecrets();
 
-    m = ((double)rd() / ((double)rd.max() + 1.0)) * (rsauser2.getN() - 2) + 1;
+    m = ((double)rd() / ((double)rd.max() + 1.0)) * (rsauser2.getN() - 3) + 2;
     cout << "Message = " << m << endl;
 
     x1 = rsauser1.encryptMessage(m, rsauser2.getD(), rsauser2.getN());
@@ -252,9 +282,23 @@ int main(int argc, char** argv)
     x2 = rsauser2.decryptMessage(x1);
     cout << "m' = " << x2 << endl;
 
-    rsauser1.encryptFile("Makefile", rsauser2.getD(), rsauser2.getN());
-    rsauser2.decryptFile("out.encrypted");
+//    rsauser1.encryptFile("Makefile", rsauser2.getD(), rsauser2.getN());
+//    rsauser2.decryptFile("out.RSAencrypted");
 
+    pair<unsigned int, unsigned int> pg, re;
+    pg = pgGenerator();
+
+    ElGamalUser elgamaluser1(pg), elgamaluser2(pg);
+
+    m = ((double)rd() / ((double)rd.max() + 1.0)) * (pg.first - 3) + 2;
+    cout << "Message = " << m << endl;
+    cout << "P = " << pg.first << ", G = " << pg.second << endl;
+
+    re = elgamaluser1.encryptMessage(m, elgamaluser2.getD());
+    cout << "R = " << re.first << ", E = " << re.second << endl;
+
+    x1 = elgamaluser2.decryptMessage(re);
+    cout << "m' = " << x1 << endl;
     return 0;
 }
 
