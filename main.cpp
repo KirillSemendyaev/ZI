@@ -95,6 +95,8 @@ pair<unsigned int, unsigned int> pgGenerator(void)
 
     do {
         pg.first = PrimeNubmerGen(1e8, 4e9);
+        if (pg.first == (unsigned int)-1)
+            continue;
         q = (pg.first - 1) / 2;
         cout << "THIS IS Q " << q << endl;
     } while (!SimplicityCheck(q));
