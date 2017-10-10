@@ -163,10 +163,10 @@ public:
             return -1;
         }
         unsigned int e;
-        char symb;
+        unsigned char symb;
 
         while (!fin.eof()) {
-            fin.read(&symb, sizeof(symb));
+            fin.read((char *)&symb, sizeof(symb));
             if (!fin.eof()) {
                 e = FastExpByMod(symb, db, nb);
                 fout.write((char *)&e, sizeof(e));
@@ -184,14 +184,14 @@ public:
             cout << "Can't open file" << endl;
             return -1;
         }
-        char e;
+        unsigned char e;
         unsigned int symb;
 
         while (!fin.eof()) {
             fin.read((char *)&symb, sizeof(symb));
             if (!fin.eof()) {
                 e = FastExpByMod(symb, c, n);
-                fout.write(&e, sizeof(e));
+                fout.write((char *)&e, sizeof(e));
             }
         }
         fin.close();
@@ -231,7 +231,7 @@ public:
 
     pair<unsigned int, unsigned int> encryptMessage(unsigned int m, unsigned int db) {
         unsigned long long int one = m, two;
-        unsigned int k = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 2;
+        unsigned int k = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 2) + 1;
         pair<unsigned int, unsigned int> re;
         re.first = FastExpByMod(g, k, p);
         two = FastExpByMod(db, k, p) * one;
@@ -243,6 +243,58 @@ public:
         unsigned long long int one = re.second, two = FastExpByMod(re.first, p - 1 - c, p);
         two = (one * two) % p;
         return two;
+    }
+
+    int encryptFile(const char* str, unsigned int db) {
+        ifstream fin(str, ios_base::binary | ios_base::in);
+        ofstream fout("out.ELGencrypted", ios_base::binary | ios_base::out |ios_base::trunc);
+        if (!fin.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return -1;
+        }
+        pair<unsigned int, unsigned int> e;
+        unsigned int one, two;
+        unsigned char symb;
+
+        while (!fin.eof()) {
+            fin.read((char *)&symb, sizeof(symb));
+            if (!fin.eof()) {
+                e = this->encryptMessage(symb, db);
+                one = e.first;
+                two = e.second;
+                fout.write((char *)&one, sizeof(one));
+                fout.write((char *)&two, sizeof(two));
+            }
+        }
+        fin.close();
+        fout.close();
+        return 0;
+    }
+
+    int decryptFile(const char* str) {
+        ifstream fin(str, ios_base::binary | ios_base::in);
+        ofstream fout("out.ELGdecrypted", ios_base::binary | ios_base::out | ios_base::trunc);
+        if (!fin.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return -1;
+        }
+        unsigned char e;
+        unsigned int one, two;
+        pair<unsigned int, unsigned int> symb;
+
+        while (!fin.eof()) {
+            fin.read((char *)&one, sizeof(one));
+            fin.read((char *)&two, sizeof(two));
+            if (!fin.eof()) {
+                symb.first = one;
+                symb.second = two;
+                e = this->decryptMessage(symb);
+                fout.write((char *)&e, sizeof(e));
+            }
+        }
+        fin.close();
+        fout.close();
+        return 0;
     }
 };
 
@@ -282,8 +334,8 @@ int main(int argc, char** argv)
     x2 = rsauser2.decryptMessage(x1);
     cout << "m' = " << x2 << endl;
 
-//    rsauser1.encryptFile("Makefile", rsauser2.getD(), rsauser2.getN());
-//    rsauser2.decryptFile("out.RSAencrypted");
+    rsauser1.encryptFile("fb.deb", rsauser2.getD(), rsauser2.getN());
+    rsauser2.decryptFile("out.RSAencrypted");
 
     pair<unsigned int, unsigned int> pg, re;
     pg = pgGenerator();
@@ -299,6 +351,9 @@ int main(int argc, char** argv)
 
     x1 = elgamaluser2.decryptMessage(re);
     cout << "m' = " << x1 << endl;
+
+    elgamaluser1.encryptFile("fb.deb", elgamaluser2.getD());
+    elgamaluser2.decryptFile("out.ELGencrypted");
     return 0;
 }
 
