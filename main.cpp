@@ -298,6 +298,77 @@ public:
     }
 };
 
+class VUser {
+private:
+    unsigned char k;
+public:
+//    VUser() {}
+
+    pair<unsigned int, unsigned int> encryptMessage(unsigned int m) {
+        int count = -1;
+        unsigned int k = m;
+        pair<unsigned int, unsigned int> mk;
+        for(; k > 0; k /= 2, count++);
+        k = ((double)rd() / ((double)rd.max() + 1.0)) * (1 << count) + (1 << count);
+        mk.first = m ^ k;
+        mk.second = k;
+        return mk;
+    }
+
+    unsigned int decryptMessage(pair<unsigned int, unsigned int> mk) {
+        return mk.first ^ mk.second;
+    }
+
+    int encryptFile(const char* str) {
+        ifstream fin(str, ios_base::binary | ios_base::in);
+        ofstream fout("out.Vencrypted", ios_base::binary | ios_base::out |ios_base::trunc);
+        ofstream foutkey("out.VKEY", ios_base::binary | ios_base::out |ios_base::trunc);
+        if (!fin.is_open() || !fout.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return -1;
+        }
+        unsigned char symb;
+
+        while (!fin.eof()) {
+            fin.read((char *)&symb, sizeof(symb));
+            if (!fin.eof()) {
+                k = ((double)rd() / ((double)rd.max() + 1.0)) * 127 + 128;
+                symb = symb ^ k;
+                fout.write((char *)&symb, sizeof(symb));
+                foutkey.write((char *)&k, sizeof(k));
+            }
+        }
+        fin.close();
+        fout.close();
+        foutkey.close();
+        return 0;
+    }
+
+    int decryptFile(const char* str) {
+        ifstream fin(str, ios_base::binary | ios_base::in);
+        ifstream finkey("out.VKEY", ios_base::binary | ios_base::in);
+        ofstream fout("out.Vdecrypted", ios_base::binary | ios_base::out | ios_base::trunc);
+        if (!fin.is_open() || !fout.is_open() || !finkey.is_open()) {
+            cout << "Can't open file" << endl;
+            return -1;
+        }
+        unsigned char e;
+
+        while (!fin.eof()) {
+            fin.read((char *)&e, sizeof(e));
+            finkey.read((char *)&k, sizeof(k));
+            if (!fin.eof() || !finkey.eof()) {
+                e = e ^ k;
+                fout.write((char *)&e, sizeof(e));
+            }
+        }
+        fin.close();
+        finkey.close();
+        fout.close();
+        return 0;
+    }
+};
+
 int main(int argc, char** argv)
 {
     unsigned int p = PrimeNubmerGen(1e8, 2e9), m, x1, x2, x3, x4;
@@ -354,6 +425,21 @@ int main(int argc, char** argv)
 
     elgamaluser1.encryptFile("fb.deb", elgamaluser2.getD());
     elgamaluser2.decryptFile("out.ELGencrypted");
+
+    VUser vuser1, vuser2;
+
+    m = ((double)rd() / ((double)rd.max() + 1.0)) * (1 << 31) + 2;
+    cout << "Message = " << m << endl;
+
+    re = vuser1.encryptMessage(m);
+    cout << "M = " << re.first << ", K = " << re.second << endl;
+
+    x1 = vuser2.decryptMessage(re);
+    cout << "m' = " << x1 << endl;
+
+    vuser1.encryptFile("fb.deb");
+    vuser2.decryptFile("out.Vencrypted");
+
     return 0;
 }
 
