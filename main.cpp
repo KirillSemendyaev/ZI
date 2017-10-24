@@ -309,7 +309,7 @@ public:
         unsigned int k = m;
         pair<unsigned int, unsigned int> mk;
         for(; k > 0; k /= 2, count++);
-        k = ((double)rd() / ((double)rd.max() + 1.0)) * (1 << count) + (1 << count);
+        k = ((double)rd() / ((double)rd.max() + 1.0)) * 254 + 1;
         mk.first = m ^ k;
         mk.second = k;
         return mk;
@@ -332,7 +332,7 @@ public:
         while (!fin.eof()) {
             fin.read((char *)&symb, sizeof(symb));
             if (!fin.eof()) {
-                k = ((double)rd() / ((double)rd.max() + 1.0)) * 127 + 128;
+                k = ((double)rd() / ((double)rd.max() + 1.0)) * 254 + 1;
                 symb = symb ^ k;
                 fout.write((char *)&symb, sizeof(symb));
                 foutkey.write((char *)&k, sizeof(k));
