@@ -2,6 +2,7 @@
 #include <vector>
 #include <random>
 #include <fstream>
+#include "cppcrypto/sha256.h"
 
 using namespace std;
 
@@ -92,10 +93,114 @@ pair<unsigned int, unsigned int> pgGenerator(void)
     return pg;
 }
 
+class ELGUser {
+private:
+    unsigned int p, g, x, y;
+public:
+    ELGUser(pair<unsigned int, unsigned int> pg) {
+        p = pg.first;
+        g = pg.second;
+        x = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 2) + 1;
+        y = FastExpByMod(g, x, p);
+    }
+
+    unsigned int getY() {
+        return y;
+    }
+
+    unsigned int signFile(const string &str) {
+        ifstream fin(str, ios_base::in | ios_base::binary);
+        ofstream fout(str + ".ELGsignature", ios_base::out | ios_base::trunc | ios_base::binary);
+
+        if (!fin.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return 1;
+        }
+
+        uint8_t c;
+        uint8_t hash[32] = {0};
+        cppcrypto::sha256 hc;
+        hc.init();
+        fin.read((char *)&c, 1);
+        while (!fin.eof()) {
+            hc.update(&c, 1);
+            fin.read((char *)&c, 1);
+        }
+        hc.final(hash);
+
+        unsigned int s, r, k = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 1;
+        long long temp;
+        unsigned int k_inv;
+        vector<int> gdc = EuclideanAlgorithm(p - 1, k);
+        while (gdc[0] != 1) {
+            k = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 1;
+            gdc = EuclideanAlgorithm(p - 1, k);
+        }
+        k_inv = (gdc[2] > 0) ? gdc[2] : (gdc[2] + p - 1);
+
+        for (int i = 0; i < 32; i++) {
+            r = FastExpByMod(g, k, p);
+            temp = (unsigned long long)hash[i] - ((unsigned long long)x * (unsigned long long)r) % (p - 1);
+            s = (((temp > 0) ? temp : (temp + p - 1)) * (unsigned long long)k_inv) % (p - 1);
+            fout.write((char*)&r, 4);
+            fout.write((char*)&s, 4);
+        }
+
+        fin.close();
+        fout.close();
+        return 0;
+    }
+
+    bool verifySignature (const string &str, unsigned int ya) {
+        ifstream fin(str, ios_base::in | ios_base::binary);
+        ifstream fin_sign(str + ".ELGsignature", ios_base::in | ios_base::binary);
+
+        if (!fin.is_open() || !fin_sign.is_open()) {
+            cout << "Can't open file" << endl;
+            return false;
+        }
+
+        uint8_t c;
+        uint8_t hash[32] = {0};
+        cppcrypto::sha256 hc;
+        hc.init();
+        fin.read((char *)&c, 1);
+        while (!fin.eof()) {
+            hc.update(&c, 1);
+            fin.read((char *)&c, 1);
+        }
+        hc.final(hash);
+
+        unsigned int s, r;
+        int i = 0;
+        bool flag = true;
+        unsigned long long temp;
+        fin_sign.read((char *)&r, 4);
+        fin_sign.read((char *)&s, 4);
+        while (!fin_sign.eof()/* && flag*/) {
+            temp = ((unsigned long long)FastExpByMod(ya, r, p) * (unsigned long long)FastExpByMod(r, s, p)) % p;
+            if ((unsigned int)temp != FastExpByMod(g, hash[i], p))
+                flag = false;
+            cout << temp << " = " << FastExpByMod(g, hash[i], p) << endl;
+            fin_sign.read((char *)&r, 4);
+            fin_sign.read((char *)&s, 4);
+            i++;
+        }
+        fin.close();
+        fin_sign.close();
+        return flag;
+    }
+};
 
 int main(int argc, char** argv)
 {
-
+    pair<unsigned int, unsigned int> pg = pgGenerator();
+    ELGUser elgUser1(pg), elgUser2(pg);
+    elgUser1.signFile("fb.deb");
+    if (elgUser2.verifySignature("fb.deb", elgUser1.getY()))
+        cout << "It's OK" << endl;
+    else
+        cout << "It's NOT OK" << endl;
     return 0;
 }
 
