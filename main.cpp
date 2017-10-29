@@ -192,12 +192,115 @@ public:
     }
 };
 
+class RSAUser {
+private:
+    unsigned int p, q, N, c, d;
+public:
+    RSAUser() {
+        p = PrimeNubmerGen(257, 46340);
+        do {
+            q = PrimeNubmerGen(257, 46340);
+        } while (q == p);
+        N = p * q;
+        c = ((double)rd() / ((double)rd.max() + 1.0)) * ((p - 1) * (q - 1) - 2) + 1;
+        vector<int> out = EuclideanAlgorithm(c, (p - 1) * (q - 1));
+        while (out[0] != 1) {
+            c = ((double)rd() / ((double)rd.max() + 1.0)) * ((p - 1) * (q - 1) - 2) + 1;
+            out = EuclideanAlgorithm(c, (p - 1) * (q - 1));
+        }
+        d = (out[2] > 0) ? out[2] : (out[2] + (p - 1) * (q - 1));
+    }
+
+    unsigned int getN() {
+        return N;
+    }
+
+    unsigned int getD() {
+        return d;
+    }
+
+    unsigned int signFile(const string &str) {
+        ifstream fin(str, ios_base::in | ios_base::binary);
+        ofstream fout(str + ".RSAsignature", ios_base::out | ios_base::trunc | ios_base::binary);
+
+        if (!fin.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return 1;
+        }
+
+        uint8_t symb;
+        uint8_t hash[32] = {0};
+        cppcrypto::sha256 hc;
+        hc.init();
+        fin.read((char *)&symb, 1);
+        while (!fin.eof()) {
+            hc.update(&symb, 1);
+            fin.read((char *)&symb, 1);
+        }
+        hc.final(hash);
+
+        unsigned int e;
+        for (int i = 0; i < 32; i++) {
+            e = FastExpByMod(hash[i], c, N);
+            fout.write((char *)&e, 4);
+        }
+        fin.close();
+        fout.close();
+        return 0;
+    }
+
+    bool verifySignature(const string &str, unsigned int Nb, unsigned int db) {
+        ifstream fin(str, ios_base::in | ios_base::binary);
+        ifstream fin_sign(str + ".RSAsignature", ios_base::in | ios_base::binary);
+
+        if (!fin.is_open() || !fin_sign.is_open()) {
+            cout << "Can't open file" << endl;
+            return false;
+        }
+
+        uint8_t symb;
+        uint8_t hash[32] = {0};
+        cppcrypto::sha256 hc;
+        hc.init();
+        fin.read((char *)&symb, 1);
+        while (!fin.eof()) {
+            hc.update(&symb, 1);
+            fin.read((char *)&symb, 1);
+        }
+        hc.final(hash);
+
+        unsigned int e, i = 0;
+        bool flag = true;
+        fin_sign.read((char *) &e, 4);
+        while(!fin_sign.eof()/* && flag*/) {
+            e = FastExpByMod(e, db, Nb);
+            cout << e << " = " << (unsigned int)hash[i] << endl;
+            if (e != hash[i])
+                flag = false;
+            fin_sign.read((char *) &e, 4);
+            i++;
+        }
+
+        fin.close();
+        fin_sign.close();
+        return flag;
+    }
+};
+
 int main(int argc, char** argv)
 {
     pair<unsigned int, unsigned int> pg = pgGenerator();
     ELGUser elgUser1(pg), elgUser2(pg);
     elgUser1.signFile("fb.deb");
     if (elgUser2.verifySignature("fb.deb", elgUser1.getY()))
+        cout << "It's OK" << endl;
+    else
+        cout << "It's NOT OK" << endl;
+
+    RSAUser rsaUser1, rsaUser2;
+
+    rsaUser1.signFile("fb.deb");
+    if (rsaUser2.verifySignature("fb.deb", rsaUser1.getN(), rsaUser1.getD()))
         cout << "It's OK" << endl;
     else
         cout << "It's NOT OK" << endl;
