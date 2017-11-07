@@ -26,8 +26,8 @@ vector<int> EuclideanAlgorithm(unsigned int a, unsigned int b)
         a = b;
         b = t;
     }
-    vector<int> U = {a, 1, 0}, V = {b, 0, 1}, T(3);
-    int q;
+    vector<long long int> U = {a, 1, 0}, V = {b, 0, 1}, T(3);
+    long long int q;
     while (V[0] != 0) {
         q = U[0] / V[0];
         T[0] = U[0] % V[0];
@@ -36,7 +36,11 @@ vector<int> EuclideanAlgorithm(unsigned int a, unsigned int b)
         U = V;
         V = T;
     }
-    return U;
+    vector<int> out(3);
+    out[0] = U[0];
+    out[1] = U[1];
+    out[2] = U[2];
+    return out;
 }
 
 bool SimplicityCheck(unsigned int n)
@@ -68,11 +72,16 @@ unsigned int PrimeNubmerGen(unsigned int a, unsigned int b)
 {
     bool f = false;
     unsigned int rand;
-    for (int i = 0; (i < 100) && !f; i++) {
+    /*for (int i = 0; (i < 100) && !f; i++) {
         rand = ((double)rd() / ((double)rd.max() + 1.0)) * (b - a) + a;
         f = SimplicityCheck(rand);
-    }
-    return f ? rand : -1;
+    }*/
+
+    do {
+        rand = ((double)rd() / ((double)rd.max() + 1.0)) * (b - a) + a;
+        f = SimplicityCheck(rand);
+    } while(!f);
+    return f ? rand : 0;
 }
 
 pair<unsigned int, unsigned int> pgGenerator(void)
@@ -91,6 +100,43 @@ pair<unsigned int, unsigned int> pgGenerator(void)
         pg.second = ((double)rd() / ((double)rd.max() + 1.0)) * (pg.first - 4) + 2;
     } while (FastExpByMod(pg.second, q, pg.first) == 1);
     return pg;
+}
+
+vector<unsigned int> qPaGenerator(void)
+{
+    vector<unsigned int> qPa(3);
+    /*do {
+        qPa[1] = PrimeNubmerGen(1 << 31, UINT32_MAX);
+        qPa[0] = PrimeNubmerGen(1 << 16, (1 << 17) - 1);
+        for (int i = 0; (i < 50) && (((qPa[1] - 1) % qPa[0]) != 0); i++)
+            qPa[0] = PrimeNubmerGen(1 << 16, (1 << 17) - 1);
+
+    } while (((qPa[1] - 1) % qPa[0]) != 0);*/
+
+    unsigned long long int b;
+    do {
+        qPa[0] = PrimeNubmerGen(1 << 16, (1 << 17) - 1);
+        b = ((double)rd() / ((double)rd.max() + 1.0)) * ((double)2147483647 / qPa[0]) + (double)2147483648 / qPa[0];
+        qPa[1] = qPa[0] * b + 1;
+        //cout << "P = " << qPa[1] << endl;
+    } while (!SimplicityCheck(qPa[1]) || (qPa[1] < 2147483648));
+
+    /*bool flag = true;
+    do {
+        qPa[1] = PrimeNubmerGen(2147483648, 4294967295);
+        cout << "P = " << qPa[1] << endl;
+        for (qPa[0] = (1 << 16) + 1; qPa[0] <= ((1 << 17) - 1); qPa[0] += 2) {
+            if (SimplicityCheck(qPa[0])) {
+                if (((qPa[1] - 1) % qPa[0]) == 0) {
+                    flag = false;
+                    break;
+                }
+            }
+        }
+    } while (flag);*/
+    unsigned int g = ((double)rd() / ((double)rd.max() + 1.0)) * (qPa[1] - 2) + 1;
+    qPa[2] = FastExpByMod(g, (qPa[1] - 1) / qPa[0], qPa[1]);
+    return qPa;
 }
 
 class ELGUser {
@@ -132,13 +178,14 @@ public:
         long long temp;
         unsigned int k_inv;
         vector<int> gdc = EuclideanAlgorithm(p - 1, k);
-        while (gdc[0] != 1) {
-            k = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 1;
-            gdc = EuclideanAlgorithm(p - 1, k);
-        }
-        k_inv = (gdc[2] > 0) ? gdc[2] : (gdc[2] + p - 1);
 
         for (int i = 0; i < 32; i++) {
+            while (gdc[0] != 1) {
+                k = ((double)rd() / ((double)rd.max() + 1.0)) * (p - 3) + 1;
+                gdc = EuclideanAlgorithm(p - 1, k);
+            }
+            k_inv = (gdc[2] > 0) ? gdc[2] : (gdc[2] + p - 1);
+
             r = FastExpByMod(g, k, p);
             temp = (unsigned long long)hash[i] - ((unsigned long long)x * (unsigned long long)r) % (p - 1);
             s = (((temp > 0) ? temp : (temp + p - 1)) * (unsigned long long)k_inv) % (p - 1);
@@ -287,6 +334,106 @@ public:
     }
 };
 
+class GOSTUser {
+private:
+    unsigned int q, a, P, x, y;
+public:
+    GOSTUser(vector<unsigned int> &qPa) {
+        q = qPa[0];
+        P = qPa[1];
+        a = qPa[2];
+        x = ((double)rd() / ((double)rd.max() + 1.0)) * (q - 2) + 1;
+        y = FastExpByMod(a, x, P);
+    }
+
+    unsigned int signFile(const string &str) {
+        ifstream fin(str, ios_base::in | ios_base::binary);
+        ofstream fout(str + ".GOSTsignature", ios_base::out | ios_base::trunc | ios_base::binary);
+
+        if (!fin.is_open() || !fout.is_open()) {
+            cout << "Can't open file" << endl;
+            return 1;
+        }
+
+        uint8_t symb;
+        uint8_t hash[32] = {0};
+        cppcrypto::sha256 hc;
+        hc.init();
+        fin.read((char *) &symb, 1);
+        while (!fin.eof()) {
+            hc.update(&symb, 1);
+            fin.read((char *) &symb, 1);
+        }
+        hc.final(hash);
+
+        unsigned int k, s = 0, r = 0;
+
+        for(int i = 0; i < 32; i++) {
+            r = 0;
+            s = 0;
+            while ((r == 0) || (s == 0)) {
+                k = ((double) rd() / ((double) rd.max() + 1.0)) * (q - 2) + 1;
+                r = FastExpByMod(a, k, P) % q;
+                if (r == 0) continue;
+                s = ((unsigned long long int)k * (unsigned long long int)hash[i] + (unsigned long long int)x * (unsigned long long int)r) % q;
+            }
+            //cout << r << ", " << s << endl;
+            fout.write((char *)&r, 4);
+            fout.write((char *)&s, 4);
+        }
+
+        fin.close();
+        fout.close();
+        return 0;
+    }
+
+    bool verifySignature(const string &str, unsigned int yb) {
+        ifstream fin(str, ios_base::in | ios_base::binary);
+        ifstream fin_sign(str + ".GOSTsignature", ios_base::in | ios_base::binary);
+
+        if (!fin.is_open() || !fin_sign.is_open()) {
+            cout << "Can't open file" << endl;
+            return false;
+        }
+
+        uint8_t symb;
+        uint8_t hash[32] = {0};
+        cppcrypto::sha256 hc;
+        hc.init();
+        fin.read((char *) &symb, 1);
+        while (!fin.eof()) {
+            hc.update(&symb, 1);
+            fin.read((char *) &symb, 1);
+        }
+        hc.final(hash);
+
+        bool flag = true;
+        int temp;
+        unsigned int u1, u2, r, s, v;
+        for (int i = 0; i < 32 ; i++) {
+            fin_sign.read((char *) &r, 4);
+            fin_sign.read((char *) &s, 4);
+            temp = EuclideanAlgorithm(hash[i], q)[2];
+            temp = (temp > 0) ? temp : (temp + q);
+            u1 = ((unsigned long long int) s * (unsigned long long int) temp) % q;
+            u2 = ((unsigned long long int)(q - r) * (unsigned long long int) temp) % q;
+            v = (((unsigned long long int)FastExpByMod(a, u1, P) * (unsigned long long int)FastExpByMod(yb, u2, P)) % P) % q;
+            cout << v << " = " << r << endl;
+            if (v != r)
+                flag = false;
+        }
+
+
+        fin.close();
+        fin_sign.close();
+        return flag;
+    }
+
+    unsigned int getY() {
+        return y;
+    }
+};
+
 int main(int argc, char** argv)
 {
     pair<unsigned int, unsigned int> pg = pgGenerator();
@@ -298,12 +445,23 @@ int main(int argc, char** argv)
         cout << "It's NOT OK" << endl;
 
     RSAUser rsaUser1, rsaUser2;
-
     rsaUser1.signFile("fb.deb");
     if (rsaUser2.verifySignature("fb.deb", rsaUser1.getN(), rsaUser1.getD()))
         cout << "It's OK" << endl;
     else
         cout << "It's NOT OK" << endl;
+
+    vector<unsigned int> qPa = qPaGenerator();
+    cout << qPa[0] << endl << qPa[1] << endl << qPa[2] << endl;
+
+    GOSTUser gostUser1(qPa), gostUser2(qPa);
+
+    gostUser1.signFile("fb.deb");
+    if (gostUser2.verifySignature("fb.deb", gostUser1.getY()))
+        cout << "It's OK" << endl;
+    else
+        cout << "It's NOT OK" << endl;
+
     return 0;
 }
 
