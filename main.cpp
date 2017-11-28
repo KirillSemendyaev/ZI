@@ -179,55 +179,55 @@ public:
             for (int i = 0; (i < 32) && flag2; i++) {
                 switch (x.denomination) {
                     case 5000:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[0], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[0], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 1000:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[1], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[1], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 500:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[2], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[2], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 100:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[3], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[3], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 50:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[4], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[4], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 10:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[5], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[5], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 5:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[6], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[6], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 2:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[7], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[7], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
                         break;
                     case 1:
-                        if (temphash[i] != FastExpByMod(x.sign[i], c[8], N)) {
+                        if (temphash[i] != FastExpByMod(x.sign[i], d[8], N)) {
                             flag2 = false;
                             flag1 = false;
                         }
@@ -327,7 +327,7 @@ public:
     void hashBankNotes(unsigned int Nb, unsigned int *db)
     {
         cppcrypto::sha256 hc;
-        int temp;
+        long long int temp;
 
         for (BankNote &x: banknotes) {
             x.hash = new uint8_t[32];
@@ -469,7 +469,7 @@ int main(int argc, char** argv)
 {
     Bank bank;
     Anon anon;
-    anon.generateBankNotes(6398);
+    anon.generateBankNotes(150);
     anon.hashBankNotes(bank.getN(), bank.getD());
     bank.signBankNotes(anon.giveMeYourMoney());
     anon.decryptSign(bank.getN());
