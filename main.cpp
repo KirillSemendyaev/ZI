@@ -4,12 +4,13 @@
 #include <algorithm>
 #include <bitset>
 #include <tuple>
+#include <fstream>
 
 using namespace std;
 
 typedef struct {
-    unsigned int* first;
-    unsigned int* second;
+    unsigned int first;
+    unsigned int second;
 } Edge;
 
 random_device rd;
@@ -93,60 +94,50 @@ unsigned int PrimeNubmerGen(unsigned int a, unsigned int b)
 class UserA {
 private:
     unsigned int v, e, nc, p, q, N;
-    vector<unsigned int> colors, vertices, c, d;
+    vector<unsigned int> colors, vertices, c, d, colorization;
     vector<Edge> edges;
 public:
-    UserA()
+    UserA(string str)
     {
         p = PrimeNubmerGen(257, 46340);
         do {
             q = PrimeNubmerGen(257, 46340);
         } while (p == q);
         N = p * q;
-        v = 6;
-        e = 9;
-        nc = 3;
-        for (unsigned int i = 1; i < 4; i++) {
-            colors.insert(colors.end(), i);
+        ifstream fin(str, ios_base::in);
+        fin >> v;
+        fin >> e;
+        fin >> nc;
+        unsigned int color, index;
+
+        for (unsigned int i = 0; i < nc; i++) {
+            fin >> color;
+            colors.push_back(color);
         }
         for (int i = 0; i < v; i++) {
-            vertices.push_back(0);
+            fin >> index;
+            colorization.push_back(index);
+            vertices.push_back(1);
         }
         for (int i = 0; i < e; i++) {
-            Edge edge = {nullptr, nullptr};
+            Edge edge = {0, 0};
             edges.push_back(edge);
+            fin >> index;
+            edges[i].first = index;
+            fin >> index;
+            edges[i].second = index;
         }
-        edges[0].first = &(vertices[0]);
-        edges[0].second = &(vertices[1]);
-        edges[1].first = &(vertices[0]);
-        edges[1].second = &(vertices[2]);
-        edges[2].first = &(vertices[0]);
-        edges[2].second = &(vertices[4]);
-        edges[3].first = &(vertices[1]);
-        edges[3].second = &(vertices[3]);
-        edges[4].first = &(vertices[1]);
-        edges[4].second = &(vertices[5]);
-        edges[5].first = &(vertices[2]);
-        edges[5].second = &(vertices[3]);
-        edges[6].first = &(vertices[2]);
-        edges[6].second = &(vertices[4]);
-        edges[7].first = &(vertices[3]);
-        edges[7].second = &(vertices[5]);
-        edges[8].first = &(vertices[4]);
-        edges[8].second = &(vertices[5]);
+        fin.close();
     }
 
-    vector<Edge> encryptGraph()
+    pair<vector<Edge>, vector<unsigned int>> encryptGraph()
     {
         random_shuffle(colors.begin(), colors.end());
-        vertices[0] = ((unsigned int)(((double)rd() / ((double)rd.max() + 1.0)) * (N / 4 - 2) + 1)) * 4 + colors[0];
-        vertices[1] = ((unsigned int)(((double)rd() / ((double)rd.max() + 1.0)) * (N / 4 - 2) + 1)) * 4 + colors[1];
-        vertices[2] = ((unsigned int)(((double)rd() / ((double)rd.max() + 1.0)) * (N / 4 - 2) + 1)) * 4 + colors[1];
-        vertices[3] = ((unsigned int)(((double)rd() / ((double)rd.max() + 1.0)) * (N / 4 - 2) + 1)) * 4 + colors[2];
-        vertices[4] = ((unsigned int)(((double)rd() / ((double)rd.max() + 1.0)) * (N / 4 - 2) + 1)) * 4 + colors[2];
-        vertices[5] = ((unsigned int)(((double)rd() / ((double)rd.max() + 1.0)) * (N / 4 - 2) + 1)) * 4 + colors[0];
+        for (int i = 0; i < v; i++) {
+            vertices[i] = ((unsigned int)(((double)rd() / ((double)rd.max() + 1.0)) * (N / 4 - 2) + 1)) * 4 + colors[colorization[i]];
+        }
+
         vector<int> out;
-        this->showMeEdges();
         c.clear();
         d.clear();
         for (int i = 0; i < v; i++) {
@@ -158,70 +149,44 @@ public:
             d.push_back((out[2] > 0) ? out[2] : (out[2] + (p - 1) * (q - 1)));
             vertices[i] = FastExpByMod(vertices[i], d[i], N);
         }
-        //this->showMeEdges();
-        return edges;
+        return (pair<vector<Edge>, vector<unsigned int>>){edges, vertices};
     }
 
     void showMeEdges()
     {
         for (int i = 0; i < e; i++) {
             cout << "Edge " << i + 1 << ":\n first: ";
-            cout << bitset<32>(*(edges[i].first));
+            cout << bitset<32>(vertices[edges[i].first]);
             cout << "\n second: ";
-            cout << bitset<32>(*(edges[i].second)) << endl;
+            cout << bitset<32>(vertices[edges[i].second]) << endl;
         }
     }
 
     tuple<unsigned int, unsigned int, unsigned int> sendC(unsigned int choice)
     {
         tuple<unsigned int, unsigned int, unsigned int> Cs;
-        switch (choice) {
-            case 1:
-                Cs = {c[0], c[1], N};
-                break;
-            case 2:
-                Cs = {c[0], c[2], N};
-                break;
-            case 3:
-                Cs = {c[0], c[4], N};
-                break;
-            case 4:
-                Cs = {c[1], c[3], N};
-                break;
-            case 5:
-                Cs = {c[1], c[5], N};
-                break;
-            case 6:
-                Cs = {c[2], c[3], N};
-                break;
-            case 7:
-                Cs = {c[2], c[4], N};
-                break;
-            case 8:
-                Cs = {c[3], c[5], N};
-                break;
-            case 9:
-                Cs = {c[4], c[5], N};
-                break;
-            default:
-                cout << "WHAT??? Choice = " << choice << endl;
-                Cs = {0, 0, N};
+        if ((choice > e) || (choice < 1)) {
+            cout << "WHAT?? Choice = " << choice << endl;
+            return {0, 0, N};
         }
+
+        Cs = {c[edges[choice - 1].first], c[edges[choice - 1].second], N};
+
         return Cs;
     }
 };
 
 class UserB {
 private:
-    unsigned int firstV, secondV;
+    unsigned int firstV, secondV, choice;
 public:
     UserB() {}
 
-    unsigned int chooseEdge(vector<Edge> edges)
+    unsigned int chooseEdge(pair<vector<Edge>, vector<unsigned int>> graph)
     {
-        unsigned int choice = (double)rd() / (double)rd.max() * (edges.size() - 1) + 1;
-        firstV = *(edges[choice - 1].first);
-        secondV = *(edges[choice - 1].second);
+        choice = (double)rd() / (double)rd.max() * (graph.first.size() - 1) + 1;
+        firstV = graph.second[graph.first[choice - 1].first];
+        secondV = graph.second[graph.first[choice - 1].second];
         return choice;
     }
 
@@ -229,6 +194,8 @@ public:
     {
         firstV = FastExpByMod(firstV, get<0>(Cs), get<2>(Cs));
         secondV = FastExpByMod(secondV, get<1>(Cs), get<2>(Cs));
+        cout << "First: " << bitset<32>(firstV) << endl;
+        cout << "Second: " << bitset<32>(firstV) << endl;
         if ((firstV & 3) == (secondV & 3))
             return false;
         else
@@ -239,16 +206,17 @@ public:
 
 int main(int argc, char** argv)
 {
-    UserA userA;
+    UserA userA("GRAPH");
     UserB userB;
+    int i;
     bool flag = true;
-    for (int i = 0; i < 100 && flag; i++) {
+    for (i = 0; i < 10 && flag; i++) {
         flag = userB.checkColors(userA.sendC(userB.chooseEdge(userA.encryptGraph())));
     }
     if (flag)
         cout << "\n===TRUTH===\n";
     else
-        cout << "\n====LIE====\n";
+        cout << "\n====LIE====\n" << i << endl;
     return 0;
 }
 
